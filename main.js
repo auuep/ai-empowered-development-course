@@ -31,7 +31,33 @@ document.addEventListener('DOMContentLoaded', () => {
     initVibeKanban();
 });
 
+function initTheme() {
+    const theme = localStorage.getItem('theme');
+    if (theme === 'dark') {
+        document.documentElement.dataset.theme = 'dark';
+        document.getElementById('themeToggle').textContent = '☀️';
+    } else {
+        delete document.documentElement.dataset.theme;
+        document.getElementById('themeToggle').textContent = '🌙';
+    }
+}
+
+function toggleTheme() {
+    const isDark = document.documentElement.dataset.theme === 'dark';
+    if (isDark) {
+        delete document.documentElement.dataset.theme;
+        localStorage.setItem('theme', 'light');
+        document.getElementById('themeToggle').textContent = '🌙';
+    } else {
+        document.documentElement.dataset.theme = 'dark';
+        localStorage.setItem('theme', 'dark');
+        document.getElementById('themeToggle').textContent = '☀️';
+    }
+}
+
 function init() {
+    initTheme();
+    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
     loadTodos();
 
     // Wire up add button
@@ -56,6 +82,28 @@ function init() {
         renderTodos();
     });
 
+    // Keyboard shortcuts
+    document.addEventListener('keydown', (e) => {
+        const tag = document.activeElement.tagName;
+        const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
+
+        if (e.key === 'Escape') {
+            document.getElementById('todoInput').value = '';
+            document.activeElement.blur();
+            document.querySelectorAll('.todo-notes:not([hidden])').forEach(el => { el.hidden = true; });
+            return;
+        }
+        if (inInput) return;
+
+        if (e.key === 'n' || e.key === 'N') {
+            e.preventDefault();
+            document.getElementById('todoInput').focus();
+        }
+        if (e.key === '1') setFilter('all');
+        if (e.key === '2') setFilter('active');
+        if (e.key === '3') setFilter('completed');
+    });
+
     renderTodos();
 }
 
@@ -76,7 +124,8 @@ function addTodo() {
         id: nextId++,
         text: text,
         completed: false,
-        dueDate: dueDateInput.value || null
+        dueDate: dueDateInput.value || null,
+        notes: ''
     });
 
     input.value = '';
@@ -117,15 +166,41 @@ function renderTodos() {
             ? `<span class="todo-due-date ${dueDateBadge.className}">${escapeHtml(dueDateBadge.label)}</span>`
             : '';
 
+        const hasNotes = todo.notes && todo.notes.trim().length > 0;
         li.innerHTML = `
-            <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
-            <span class="todo-text">${escapeHtml(todo.text)}</span>
-            ${badgeHtml}
-            <button class="todo-delete">Delete</button>
+            <div class="todo-row">
+                <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
+                <span class="todo-text">${escapeHtml(todo.text)}</span>
+                ${badgeHtml}
+                <button class="todo-notes-btn ${hasNotes ? 'has-notes' : ''}" aria-label="Toggle notes">📝</button>
+                <button class="todo-delete">Delete</button>
+            </div>
+            <div class="todo-notes" hidden>
+                <textarea class="todo-notes-textarea" placeholder="Add notes...">${escapeHtml(todo.notes ?? '')}</textarea>
+            </div>
         `;
 
         li.querySelector('.todo-checkbox').addEventListener('change', () => toggleTodo(todo.id));
         li.querySelector('.todo-delete').addEventListener('click', () => deleteTodo(todo.id));
+
+        const notesBtn = li.querySelector('.todo-notes-btn');
+        const notesPanel = li.querySelector('.todo-notes');
+        const notesTextarea = li.querySelector('.todo-notes-textarea');
+
+        notesBtn.addEventListener('click', () => {
+            notesPanel.hidden = !notesPanel.hidden;
+            if (!notesPanel.hidden) notesTextarea.focus();
+        });
+
+        notesTextarea.addEventListener('blur', () => {
+            const todoItem = todos.find(t => t.id === todo.id);
+            if (todoItem) {
+                todoItem.notes = notesTextarea.value;
+                saveTodos();
+                const hasContent = notesTextarea.value.trim().length > 0;
+                notesBtn.classList.toggle('has-notes', hasContent);
+            }
+        });
 
         todoList.appendChild(li);
     });
