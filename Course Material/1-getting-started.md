@@ -1,13 +1,5 @@
-# Module 1: Getting Started
-
-## What You'll Learn
-- Set up your development environment
-- Run the TODO app locally
-- Understand the project structure
-
----
-
-In this section you will learn how to run the demo TODO app on localhost so you can use it to complete the exercises.
+# Getting Started
+In section you will learn to how to run the demo TODO app on localhost so you can use it to complete the exercises.
 
 ## Prerequisites
 - An IDE ([Cursor](https://cursor.com), VSCode, or terminal-only)
@@ -66,7 +58,3 @@ ai-empowered-development-course/
 5. Test: add a todo, mark it complete, delete it, try the filter buttons
 
 **Exercise is complete when**: App loads without errors and all basic features (add, complete, delete, filter) work
-
----
-
-[Next: Working with AI Agents →](2-working-with-ai-agents.md)
