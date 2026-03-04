@@ -58,6 +58,13 @@ function toggleTheme() {
 function init() {
     initTheme();
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+
+    const shortcutsBtn = document.getElementById('shortcutsBtn');
+    const shortcutsPanel = document.getElementById('shortcutsPanel');
+    shortcutsBtn.addEventListener('click', () => {
+        shortcutsPanel.hidden = !shortcutsPanel.hidden;
+        shortcutsBtn.classList.toggle('active', !shortcutsPanel.hidden);
+    });
     loadTodos();
 
     // Wire up add button
@@ -91,6 +98,8 @@ function init() {
             document.getElementById('todoInput').value = '';
             document.activeElement.blur();
             document.querySelectorAll('.todo-notes:not([hidden])').forEach(el => { el.hidden = true; });
+            shortcutsPanel.hidden = true;
+            shortcutsBtn.classList.remove('active');
             return;
         }
         if (inInput) return;
