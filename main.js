@@ -14,10 +14,15 @@ let currentSort = 'default';
 const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
 let currentSortPriority = false;
 
+/** Persists the current todos array and nextId counter to localStorage. */
 function saveTodos() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos, nextId }));
 }
 
+/**
+ * Loads todos from localStorage into the in-memory array.
+ * Backfills missing priority fields with 'medium' for backwards compatibility.
+ */
 function loadTodos() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
@@ -35,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initVibeKanban();
 });
 
+/** Reads the saved theme from localStorage and applies it to the document on load. */
 function initTheme() {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') {
@@ -46,6 +52,7 @@ function initTheme() {
     }
 }
 
+/** Toggles between light and dark theme and saves the preference to localStorage. */
 function toggleTheme() {
     const isDark = document.documentElement.dataset.theme === 'dark';
     if (isDark) {
@@ -59,6 +66,10 @@ function toggleTheme() {
     }
 }
 
+/**
+ * Initialises the app: loads persisted data, wires up all UI event listeners,
+ * and performs the initial render.
+ */
 function init() {
     initTheme();
     document.getElementById('themeToggle').addEventListener('click', toggleTheme);
@@ -134,12 +145,17 @@ function init() {
     renderTodos();
 }
 
+/** Mounts the Vibe Kanban web companion widget into the document body. */
 function initVibeKanban() {
     const companion = new VibeKanbanWebCompanion();
     companion.render(document.body);
 }
 
 // Feature 1: Add, toggle, delete todos
+/**
+ * Reads the input field and creates a new todo with the selected priority and
+ * optional due date, then saves and re-renders the list.
+ */
 function addTodo() {
     const input = document.getElementById('todoInput');
     const text = input.value.trim();
@@ -166,6 +182,10 @@ function addTodo() {
     renderTodos();
 }
 
+/**
+ * Toggles the completed state of the todo with the given id.
+ * @param {number} id - The id of the todo to toggle.
+ */
 function toggleTodo(id) {
     const todo = todos.find(t => t.id === id);
     if (todo) {
@@ -175,6 +195,10 @@ function toggleTodo(id) {
     }
 }
 
+/**
+ * Removes the todo with the given id from the list, then saves and re-renders.
+ * @param {number} id - The id of the todo to delete.
+ */
 function deleteTodo(id) {
     todos = todos.filter(t => t.id !== id);
     saveTodos();
@@ -182,6 +206,10 @@ function deleteTodo(id) {
 }
 
 // Feature 1: Render todos
+/**
+ * Clears and rebuilds the todo list DOM from the current filtered and sorted
+ * todos, attaching all necessary event listeners to each item.
+ */
 function renderTodos() {
     const todoList = document.getElementById('todoList');
     const filteredTodos = getFilteredTodos();
@@ -256,6 +284,11 @@ function renderTodos() {
 }
 
 // Feature 2: Filter todos based on current filter
+/**
+ * Returns a filtered and optionally sorted copy of the todos array based on
+ * the current filter, priority sort, and due-date sort state.
+ * @returns {Array} The filtered and sorted todos.
+ */
 function getFilteredTodos() {
     let result;
     if (currentFilter === 'active') {
@@ -290,6 +323,12 @@ function getFilteredTodos() {
 }
 
 // Feature 3: Format a yyyy-MM-dd string into a display label + CSS class
+/**
+ * Converts a yyyy-MM-dd date string into a human-readable label and CSS class
+ * for the due-date badge (e.g. "Due today", "Overdue: 3 Jan").
+ * @param {string|null} dateString - ISO-format date string or null.
+ * @returns {{ label: string, className: string }|null} Badge data, or null if no date.
+ */
 function formatDueDate(dateString) {
     if (!dateString) return null;
     // Use parse (not parseISO) to get a local date, avoiding UTC offset issues
@@ -305,6 +344,10 @@ function formatDueDate(dateString) {
 }
 
 // Feature 2: Set filter and update UI
+/**
+ * Sets the active filter, updates filter button styles, and re-renders the list.
+ * @param {string} filter - One of 'all', 'active', or 'completed'.
+ */
 function setFilter(filter) {
     currentFilter = filter;
 
@@ -321,6 +364,11 @@ function setFilter(filter) {
 }
 
 // Utility function to escape HTML
+/**
+ * Escapes a string for safe insertion into HTML to prevent XSS.
+ * @param {string} text - The raw string to escape.
+ * @returns {string} The HTML-escaped string.
+ */
 function escapeHtml(text) {
     const div = document.createElement('div');
     div.textContent = text;
