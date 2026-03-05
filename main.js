@@ -10,6 +10,10 @@ let nextId = 1;
 // Current sort (Feature 3)
 let currentSort = 'default';
 
+// Priority system
+const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
+let currentSortPriority = false;
+
 function saveTodos() {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos, nextId }));
 }
@@ -18,7 +22,7 @@ function loadTodos() {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
         const data = JSON.parse(stored);
-        todos = data.todos;
+        todos = data.todos.map(todo => ({ ...todo, priority: todo.priority ?? 'medium' }));
         nextId = data.nextId;
     }
 }
@@ -82,10 +86,24 @@ function init() {
         btn.addEventListener('click', () => setFilter(btn.dataset.filter));
     });
 
-    // Wire up sort button
+    // Wire up priority selector buttons
+    document.querySelectorAll('.priority-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            document.querySelectorAll('.priority-btn').forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+        });
+    });
+
+    // Wire up sort buttons
     document.getElementById('sortDueDateBtn').addEventListener('click', () => {
         currentSort = currentSort === 'dueDate' ? 'default' : 'dueDate';
         document.getElementById('sortDueDateBtn').classList.toggle('active', currentSort === 'dueDate');
+        renderTodos();
+    });
+
+    document.getElementById('sortPriorityBtn').addEventListener('click', () => {
+        currentSortPriority = !currentSortPriority;
+        document.getElementById('sortPriorityBtn').classList.toggle('active', currentSortPriority);
         renderTodos();
     });
 
@@ -129,16 +147,21 @@ function addTodo() {
     if (text === '') return;
 
     const dueDateInput = document.getElementById('dueDateInput');
+    const activeBtn = document.querySelector('.priority-btn.active');
+    const priority = activeBtn ? activeBtn.dataset.priority : 'medium';
+
     todos.push({
         id: nextId++,
         text: text,
         completed: false,
         dueDate: dueDateInput.value || null,
-        notes: ''
+        notes: '',
+        priority
     });
 
     input.value = '';
     dueDateInput.value = '';
+    document.querySelectorAll('.priority-btn').forEach(b => b.classList.toggle('active', b.dataset.priority === 'medium'));
     saveTodos();
     renderTodos();
 }
@@ -175,12 +198,21 @@ function renderTodos() {
             ? `<span class="todo-due-date ${dueDateBadge.className}">${escapeHtml(dueDateBadge.label)}</span>`
             : '';
 
+        const priorityLabel = todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1);
+        const priorityBadgeHtml = `<span class="priority-badge priority-${todo.priority}">${priorityLabel}</span>`;
+
         const hasNotes = todo.notes && todo.notes.trim().length > 0;
         li.innerHTML = `
             <div class="todo-row">
                 <input type="checkbox" class="todo-checkbox" ${todo.completed ? 'checked' : ''}>
                 <span class="todo-text">${escapeHtml(todo.text)}</span>
+                ${priorityBadgeHtml}
                 ${badgeHtml}
+                <select class="todo-priority-select" aria-label="Todo priority">
+                    <option value="high" ${todo.priority === 'high' ? 'selected' : ''}>High</option>
+                    <option value="medium" ${todo.priority === 'medium' ? 'selected' : ''}>Medium</option>
+                    <option value="low" ${todo.priority === 'low' ? 'selected' : ''}>Low</option>
+                </select>
                 <button class="todo-notes-btn ${hasNotes ? 'has-notes' : ''}" aria-label="Toggle notes">📝</button>
                 <button class="todo-delete">Delete</button>
             </div>
@@ -191,6 +223,14 @@ function renderTodos() {
 
         li.querySelector('.todo-checkbox').addEventListener('change', () => toggleTodo(todo.id));
         li.querySelector('.todo-delete').addEventListener('click', () => deleteTodo(todo.id));
+        li.querySelector('.todo-priority-select').addEventListener('change', (e) => {
+            const todoItem = todos.find(t => t.id === todo.id);
+            if (todoItem) {
+                todoItem.priority = e.target.value;
+                saveTodos();
+                renderTodos();
+            }
+        });
 
         const notesBtn = li.querySelector('.todo-notes-btn');
         const notesPanel = li.querySelector('.todo-notes');
@@ -226,16 +266,23 @@ function getFilteredTodos() {
         result = [...todos];
     }
 
-    // Feature 3: Sort by due date (upcoming first, no-date at end)
-    if (currentSort === 'dueDate') {
+    // Sort by priority and/or due date (composable)
+    if (currentSortPriority || currentSort === 'dueDate') {
         result.sort((a, b) => {
-            if (!a.dueDate && !b.dueDate) return 0;
-            if (!a.dueDate) return 1;
-            if (!b.dueDate) return -1;
-            return compareAsc(
-                parse(a.dueDate, 'yyyy-MM-dd', new Date()),
-                parse(b.dueDate, 'yyyy-MM-dd', new Date())
-            );
+            if (currentSortPriority) {
+                const diff = PRIORITY_ORDER[a.priority] - PRIORITY_ORDER[b.priority];
+                if (diff !== 0) return diff;
+            }
+            if (currentSort === 'dueDate') {
+                if (!a.dueDate && !b.dueDate) return 0;
+                if (!a.dueDate) return 1;
+                if (!b.dueDate) return -1;
+                return compareAsc(
+                    parse(a.dueDate, 'yyyy-MM-dd', new Date()),
+                    parse(b.dueDate, 'yyyy-MM-dd', new Date())
+                );
+            }
+            return 0;
         });
     }
 

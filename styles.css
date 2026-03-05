@@ -170,6 +170,43 @@ kbd {
     box-shadow: 0 0 0 3px rgb(59 130 246 / 10%);
 }
 
+/* Priority selector (input form) */
+.priority-selector {
+    display: flex;
+    gap: 2px;
+    flex-shrink: 0;
+}
+
+.priority-selector .priority-btn {
+    padding: 0.75rem 0.75rem;
+    background-color: var(--color-surface);
+    color: var(--color-text);
+    border: 1px solid var(--color-input-border);
+    cursor: pointer;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: background-color 0.2s, color 0.2s;
+    white-space: nowrap;
+}
+
+.priority-selector .priority-btn:first-child {
+    border-radius: 0.375rem 0 0 0.375rem;
+}
+
+.priority-selector .priority-btn:last-child {
+    border-radius: 0 0.375rem 0.375rem 0;
+}
+
+.priority-selector .priority-btn:hover {
+    background-color: var(--color-surface-hover);
+}
+
+.priority-selector .priority-btn.active {
+    background-color: var(--color-primary);
+    color: white;
+    border-color: var(--color-primary);
+}
+
 .input-section button {
     padding: 0.75rem 1.5rem;
     background-color: var(--color-primary);
@@ -291,6 +328,21 @@ kbd {
     color: var(--color-completed-text);
 }
 
+/* Priority badges */
+.priority-badge {
+    flex-shrink: 0;
+    display: inline-block;
+    padding: 0.2rem 0.55rem;
+    border-radius: 9999px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.priority-high   { background-color: #fee2e2; color: #b91c1c; }
+.priority-medium { background-color: #fef3c7; color: #b45309; }
+.priority-low    { background-color: #d1fae5; color: #065f46; }
+
 /* Due date badges (Feature 3) */
 .todo-due-date {
     flex-shrink: 0;
@@ -358,6 +410,16 @@ kbd {
     background-color: var(--color-background, #fff);
     color: var(--color-text, #1f2937);
     box-sizing: border-box;
+}
+
+.todo-priority-select {
+    border: none;
+    background: transparent;
+    color: var(--color-muted);
+    font-size: 0.8rem;
+    cursor: pointer;
+    padding: 0;
+    flex-shrink: 0;
 }
 
 .todo-notes-btn {
