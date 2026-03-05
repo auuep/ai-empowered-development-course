@@ -1,21 +1,38 @@
 import { VibeKanbanWebCompanion } from 'vibe-kanban-web-companion';
 import { format, parse, isToday, isTomorrow, isPast, compareAsc } from 'date-fns';
 
+type Priority = 'high' | 'medium' | 'low';
+type Filter = 'all' | 'active' | 'completed';
+
+interface Todo {
+    id: number;
+    text: string;
+    completed: boolean;
+    dueDate: string | null;
+    notes: string;
+    priority: Priority;
+}
+
+interface DueDateInfo {
+    label: string;
+    className: string;
+}
+
 const STORAGE_KEY = 'todos-app';
 
 // Todos array (Feature 1)
-let todos = [];
-let nextId = 1;
+let todos: Todo[] = [];
+let nextId: number = 1;
 
 // Current sort (Feature 3)
-let currentSort = 'default';
+let currentSort: string = 'default';
 
 // Priority system
-const PRIORITY_ORDER = { high: 0, medium: 1, low: 2 };
-let currentSortPriority = false;
+const PRIORITY_ORDER: Record<Priority, number> = { high: 0, medium: 1, low: 2 };
+let currentSortPriority: boolean = false;
 
 /** Persists the current todos array and nextId counter to localStorage. */
-function saveTodos() {
+function saveTodos(): void {
     localStorage.setItem(STORAGE_KEY, JSON.stringify({ todos, nextId }));
 }
 
@@ -23,17 +40,17 @@ function saveTodos() {
  * Loads todos from localStorage into the in-memory array.
  * Backfills missing priority fields with 'medium' for backwards compatibility.
  */
-function loadTodos() {
+function loadTodos(): void {
     const stored = localStorage.getItem(STORAGE_KEY);
     if (stored) {
         const data = JSON.parse(stored);
-        todos = data.todos.map(todo => ({ ...todo, priority: todo.priority ?? 'medium' }));
+        todos = data.todos.map((todo: Todo) => ({ ...todo, priority: todo.priority ?? 'medium' }));
         nextId = data.nextId;
     }
 }
 
 // Current filter (Feature 2)
-let currentFilter = 'all';
+let currentFilter: Filter = 'all';
 
 document.addEventListener('DOMContentLoaded', () => {
     init();
@@ -41,28 +58,28 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 /** Reads the saved theme from localStorage and applies it to the document on load. */
-function initTheme() {
+function initTheme(): void {
     const theme = localStorage.getItem('theme');
     if (theme === 'dark') {
         document.documentElement.dataset.theme = 'dark';
-        document.getElementById('themeToggle').textContent = '☀️';
+        document.getElementById('themeToggle')!.textContent = '☀️';
     } else {
         delete document.documentElement.dataset.theme;
-        document.getElementById('themeToggle').textContent = '🌙';
+        document.getElementById('themeToggle')!.textContent = '🌙';
     }
 }
 
 /** Toggles between light and dark theme and saves the preference to localStorage. */
-function toggleTheme() {
+function toggleTheme(): void {
     const isDark = document.documentElement.dataset.theme === 'dark';
     if (isDark) {
         delete document.documentElement.dataset.theme;
         localStorage.setItem('theme', 'light');
-        document.getElementById('themeToggle').textContent = '🌙';
+        document.getElementById('themeToggle')!.textContent = '🌙';
     } else {
         document.documentElement.dataset.theme = 'dark';
         localStorage.setItem('theme', 'dark');
-        document.getElementById('themeToggle').textContent = '☀️';
+        document.getElementById('themeToggle')!.textContent = '☀️';
     }
 }
 
@@ -70,12 +87,12 @@ function toggleTheme() {
  * Initialises the app: loads persisted data, wires up all UI event listeners,
  * and performs the initial render.
  */
-function init() {
+function init(): void {
     initTheme();
-    document.getElementById('themeToggle').addEventListener('click', toggleTheme);
+    document.getElementById('themeToggle')!.addEventListener('click', toggleTheme);
 
-    const shortcutsBtn = document.getElementById('shortcutsBtn');
-    const shortcutsPanel = document.getElementById('shortcutsPanel');
+    const shortcutsBtn = document.getElementById('shortcutsBtn')!;
+    const shortcutsPanel = document.getElementById('shortcutsPanel')! as HTMLElement;
     shortcutsBtn.addEventListener('click', () => {
         shortcutsPanel.hidden = !shortcutsPanel.hidden;
         shortcutsBtn.classList.toggle('active', !shortcutsPanel.hidden);
@@ -83,18 +100,18 @@ function init() {
     loadTodos();
 
     // Wire up add button
-    const addBtn = document.getElementById('addBtn');
-    const todoInput = document.getElementById('todoInput');
+    const addBtn = document.getElementById('addBtn')!;
+    const todoInput = document.getElementById('todoInput')!;
 
     addBtn.addEventListener('click', addTodo);
-    todoInput.addEventListener('keypress', (e) => {
+    todoInput.addEventListener('keypress', (e: KeyboardEvent) => {
         if (e.key === 'Enter') addTodo();
     });
 
     // Wire up filter buttons
     const filterButtons = document.querySelectorAll('.filter-btn');
     filterButtons.forEach(btn => {
-        btn.addEventListener('click', () => setFilter(btn.dataset.filter));
+        btn.addEventListener('click', () => setStatusFilter((btn as HTMLElement).dataset.filter as Filter));
     });
 
     // Wire up priority selector buttons
@@ -106,27 +123,27 @@ function init() {
     });
 
     // Wire up sort buttons
-    document.getElementById('sortDueDateBtn').addEventListener('click', () => {
+    document.getElementById('sortDueDateBtn')!.addEventListener('click', () => {
         currentSort = currentSort === 'dueDate' ? 'default' : 'dueDate';
-        document.getElementById('sortDueDateBtn').classList.toggle('active', currentSort === 'dueDate');
+        document.getElementById('sortDueDateBtn')!.classList.toggle('active', currentSort === 'dueDate');
         renderTodos();
     });
 
-    document.getElementById('sortPriorityBtn').addEventListener('click', () => {
+    document.getElementById('sortPriorityBtn')!.addEventListener('click', () => {
         currentSortPriority = !currentSortPriority;
-        document.getElementById('sortPriorityBtn').classList.toggle('active', currentSortPriority);
+        document.getElementById('sortPriorityBtn')!.classList.toggle('active', currentSortPriority);
         renderTodos();
     });
 
     // Keyboard shortcuts
-    document.addEventListener('keydown', (e) => {
-        const tag = document.activeElement.tagName;
+    document.addEventListener('keydown', (e: KeyboardEvent) => {
+        const tag = (document.activeElement as HTMLElement).tagName;
         const inInput = tag === 'INPUT' || tag === 'TEXTAREA';
 
         if (e.key === 'Escape') {
-            document.getElementById('todoInput').value = '';
-            document.activeElement.blur();
-            document.querySelectorAll('.todo-notes:not([hidden])').forEach(el => { el.hidden = true; });
+            (document.getElementById('todoInput')! as HTMLInputElement).value = '';
+            (document.activeElement as HTMLElement).blur();
+            document.querySelectorAll('.todo-notes:not([hidden])').forEach(el => { (el as HTMLElement).hidden = true; });
             shortcutsPanel.hidden = true;
             shortcutsBtn.classList.remove('active');
             return;
@@ -135,19 +152,20 @@ function init() {
 
         if (e.key === 'n' || e.key === 'N') {
             e.preventDefault();
-            document.getElementById('todoInput').focus();
+            (document.getElementById('todoInput')! as HTMLInputElement).focus();
         }
-        if (e.key === '1') setFilter('all');
-        if (e.key === '2') setFilter('active');
-        if (e.key === '3') setFilter('completed');
+        if (e.key === '1') setStatusFilter('all');
+        if (e.key === '2') setStatusFilter('active');
+        if (e.key === '3') setStatusFilter('completed');
     });
 
     renderTodos();
 }
 
 /** Mounts the Vibe Kanban web companion widget into the document body. */
-function initVibeKanban() {
-    const companion = new VibeKanbanWebCompanion();
+function initVibeKanban(): void {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    const companion = new (VibeKanbanWebCompanion as any)();
     companion.render(document.body);
 }
 
@@ -156,15 +174,15 @@ function initVibeKanban() {
  * Reads the input field and creates a new todo with the selected priority and
  * optional due date, then saves and re-renders the list.
  */
-function addTodo() {
-    const input = document.getElementById('todoInput');
+function addTodo(): void {
+    const input = document.getElementById('todoInput')! as HTMLInputElement;
     const text = input.value.trim();
 
     if (text === '') return;
 
-    const dueDateInput = document.getElementById('dueDateInput');
-    const activeBtn = document.querySelector('.priority-btn.active');
-    const priority = activeBtn ? activeBtn.dataset.priority : 'medium';
+    const dueDateInput = document.getElementById('dueDateInput')! as HTMLInputElement;
+    const activeBtn = document.querySelector('.priority-btn.active') as HTMLElement | null;
+    const priority = (activeBtn?.dataset.priority ?? 'medium') as Priority;
 
     todos.push({
         id: nextId++,
@@ -177,16 +195,16 @@ function addTodo() {
 
     input.value = '';
     dueDateInput.value = '';
-    document.querySelectorAll('.priority-btn').forEach(b => b.classList.toggle('active', b.dataset.priority === 'medium'));
+    document.querySelectorAll('.priority-btn').forEach(b => b.classList.toggle('active', (b as HTMLElement).dataset.priority === 'medium'));
     saveTodos();
     renderTodos();
 }
 
 /**
  * Toggles the completed state of the todo with the given id.
- * @param {number} id - The id of the todo to toggle.
+ * @param id - The id of the todo to toggle.
  */
-function toggleTodo(id) {
+function toggleTodo(id: number): void {
     const todo = todos.find(t => t.id === id);
     if (todo) {
         todo.completed = !todo.completed;
@@ -197,9 +215,9 @@ function toggleTodo(id) {
 
 /**
  * Removes the todo with the given id from the list, then saves and re-renders.
- * @param {number} id - The id of the todo to delete.
+ * @param id - The id of the todo to delete.
  */
-function deleteTodo(id) {
+function deleteDaTodo(id: number): void {
     todos = todos.filter(t => t.id !== id);
     saveTodos();
     renderTodos();
@@ -210,8 +228,8 @@ function deleteTodo(id) {
  * Clears and rebuilds the todo list DOM from the current filtered and sorted
  * todos, attaching all necessary event listeners to each item.
  */
-function renderTodos() {
-    const todoList = document.getElementById('todoList');
+function renderTodos(): void {
+    const todoList = document.getElementById('todoList')!;
     const filteredTodos = getFilteredTodos();
 
     todoList.innerHTML = '';
@@ -249,20 +267,20 @@ function renderTodos() {
             </div>
         `;
 
-        li.querySelector('.todo-checkbox').addEventListener('change', () => toggleTodo(todo.id));
-        li.querySelector('.todo-delete').addEventListener('click', () => deleteTodo(todo.id));
-        li.querySelector('.todo-priority-select').addEventListener('change', (e) => {
+        li.querySelector('.todo-checkbox')!.addEventListener('change', () => toggleTodo(todo.id));
+        li.querySelector('.todo-delete')!.addEventListener('click', () => deleteDaTodo(todo.id));
+        (li.querySelector('.todo-priority-select')! as HTMLSelectElement).addEventListener('change', (e: Event) => {
             const todoItem = todos.find(t => t.id === todo.id);
             if (todoItem) {
-                todoItem.priority = e.target.value;
+                todoItem.priority = (e.target as HTMLSelectElement).value as Priority;
                 saveTodos();
                 renderTodos();
             }
         });
 
-        const notesBtn = li.querySelector('.todo-notes-btn');
-        const notesPanel = li.querySelector('.todo-notes');
-        const notesTextarea = li.querySelector('.todo-notes-textarea');
+        const notesBtn = li.querySelector('.todo-notes-btn')! as HTMLElement;
+        const notesPanel = li.querySelector('.todo-notes')! as HTMLElement;
+        const notesTextarea = li.querySelector('.todo-notes-textarea')! as HTMLTextAreaElement;
 
         notesBtn.addEventListener('click', () => {
             notesPanel.hidden = !notesPanel.hidden;
@@ -287,10 +305,9 @@ function renderTodos() {
 /**
  * Returns a filtered and optionally sorted copy of the todos array based on
  * the current filter, priority sort, and due-date sort state.
- * @returns {Array} The filtered and sorted todos.
  */
-function getFilteredTodos() {
-    let result;
+function getFilteredTodos(): Todo[] {
+    let result: Todo[];
     if (currentFilter === 'active') {
         result = todos.filter(t => !t.completed);
     } else if (currentFilter === 'completed') {
@@ -326,10 +343,9 @@ function getFilteredTodos() {
 /**
  * Converts a yyyy-MM-dd date string into a human-readable label and CSS class
  * for the due-date badge (e.g. "Due today", "Overdue: 3 Jan").
- * @param {string|null} dateString - ISO-format date string or null.
- * @returns {{ label: string, className: string }|null} Badge data, or null if no date.
+ * @param dateString - ISO-format date string or null.
  */
-function formatDueDate(dateString) {
+function formatDueDate(dateString: string | null): DueDateInfo | null {
     if (!dateString) return null;
     // Use parse (not parseISO) to get a local date, avoiding UTC offset issues
     const date = parse(dateString, 'yyyy-MM-dd', new Date());
@@ -346,16 +362,16 @@ function formatDueDate(dateString) {
 // Feature 2: Set filter and update UI
 /**
  * Sets the active filter, updates filter button styles, and re-renders the list.
- * @param {string} filter - One of 'all', 'active', or 'completed'.
+ * @param filter - One of 'all', 'active', or 'completed'.
  */
-function setFilter(filter) {
+function setStatusFilter(filter: Filter): void {
     currentFilter = filter;
 
     // Update button styling
     const filterButtons = document.querySelectorAll('.filter-btn');
     filterButtons.forEach(btn => {
         btn.classList.remove('active');
-        if (btn.dataset.filter === filter) {
+        if ((btn as HTMLElement).dataset.filter === filter) {
             btn.classList.add('active');
         }
     });
@@ -366,10 +382,9 @@ function setFilter(filter) {
 // Utility function to escape HTML
 /**
  * Escapes a string for safe insertion into HTML to prevent XSS.
- * @param {string} text - The raw string to escape.
- * @returns {string} The HTML-escaped string.
+ * @param text - The raw string to escape.
  */
-function escapeHtml(text) {
+function escapeHtml(text: string): string {
     const div = document.createElement('div');
     div.textContent = text;
     return div.innerHTML;
