@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/kenryu42/claude-code-safety-net/main/assets/cc-safety-net.schema.json",
+  "version": 1,
+  "rules": [
+    {
+      "name": "block-git-add-all",
+      "command": "git",
+      "subcommand": "add",
+      "block_args": ["-A", "--all", "."],
+      "reason": "Avoid blanket staging. Use 'git add <specific-files>' to stage only the files you intend to commit."
+    }
+  ]
+}
